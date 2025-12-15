@@ -1,0 +1,28 @@
+sources:
+  my-local-docker-pg:
+    kind: postgres
+    # Use 127.0.0.1 instead of localhost to avoid DNS ambiguity
+    host: 127.0.0.1  
+    port: 5432
+    database: olist_ecommerce  # or your specific db name
+    user: postgres
+    password: postgres
+
+tools:
+  get-all-tables:
+    kind: postgres-list-tables
+    source: my-local-docker-pg
+    description: "Lists all tables in the database."
+
+  execute_sql_tool:
+    kind: postgres-execute-sql
+    source: my-local-docker-pg
+    description: |
+      Use this tool to execute any arbitrary SQL statement.
+      Useful for complex joins, aggregations, or exploration not covered by other tools.
+      Write the full SQL query in the 'query' parameter.
+
+  list_schemas:
+    kind: postgres-list-schemas
+    source: my-local-docker-pg
+    description: "Lists all schemas in the database excluding system and temporary schemas. Returns schema names, owners, and object counts."   

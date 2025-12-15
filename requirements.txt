@@ -1,0 +1,13 @@
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+scipy
+psycopg2-binary
+streamlit
+sqlalchemy
+tabulate
+python-dotenv
+google-adk
+requests

@@ -4,16 +4,22 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import warnings
+import os
+from dotenv import load_dotenv
+import io
 warnings.filterwarnings('ignore')
 
-# Database connection parameters
+load_dotenv() 
+
 DB_PARAMS = {
-    'host': 'localhost',
-    'port': 5432,
-    'user': 'postgres',  # Change if needed
-    'password': 'postgres',  # Change to your password
-    'database': 'olist_ecommerce'
+    'host': os.getenv('DB_HOST'),
+    'port': int(os.getenv('DB_PORT', 5432)), 
+    
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'database': os.getenv('DB_NAME')
 }
+
 
 def create_database():
     """Create the database if it doesn't exist"""
@@ -24,7 +30,7 @@ def create_database():
             port=DB_PARAMS['port'],
             user=DB_PARAMS['user'],
             password=DB_PARAMS['password'],
-            database='postgres'
+            database='d5am1cf12d6h8g'
         )
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cursor = conn.cursor()
@@ -50,6 +56,36 @@ def create_database():
 def create_tables():
     """Create all tables with proper relationships"""
     
+    try:
+        conn = psycopg2.connect(**DB_PARAMS)
+        cursor = conn.cursor()
+        
+        # Drop all tables first to ensure clean schema
+        print("\n🗑️  Dropping existing tables...")
+        drop_tables = [
+            "DROP TABLE IF EXISTS order_reviews CASCADE;",
+            "DROP TABLE IF EXISTS order_payments CASCADE;",
+            "DROP TABLE IF EXISTS order_items CASCADE;",
+            "DROP TABLE IF EXISTS orders CASCADE;",
+            "DROP TABLE IF EXISTS products CASCADE;",
+            "DROP TABLE IF EXISTS product_category_translation CASCADE;",
+            "DROP TABLE IF EXISTS sellers CASCADE;",
+            "DROP TABLE IF EXISTS customers CASCADE;",
+            "DROP TABLE IF EXISTS geolocation CASCADE;"
+        ]
+        
+        for drop_query in drop_tables:
+            cursor.execute(drop_query)
+        
+        conn.commit()
+        print("✓ Existing tables dropped\n")
+        
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"✗ Error dropping tables: {e}")
+        raise
+    
     # SQL statements for creating tables
     create_table_queries = [
         # 1. Geolocation (independent table)
@@ -74,15 +110,13 @@ def create_tables():
         );
         """,
         
-        # 3. Sellers (depends on geolocation)
+        # 3. Sellers (geolocation is optional - not all zip codes are in geolocation table)
         """
         CREATE TABLE IF NOT EXISTS sellers (
             seller_id VARCHAR(50) PRIMARY KEY,
             seller_zip_code_prefix INTEGER,
             seller_city VARCHAR(100),
-            seller_state VARCHAR(2),
-            FOREIGN KEY (seller_zip_code_prefix) 
-                REFERENCES geolocation(geolocation_zip_code_prefix)
+            seller_state VARCHAR(2)
         );
         """,
         
@@ -105,9 +139,7 @@ def create_tables():
             product_weight_g FLOAT,
             product_length_cm FLOAT,
             product_height_cm FLOAT,
-            product_width_cm FLOAT,
-            FOREIGN KEY (product_category_name) 
-                REFERENCES product_category_translation(product_category_name)
+            product_width_cm FLOAT
         );
         """,
         
@@ -160,7 +192,7 @@ def create_tables():
         # 9. Order Reviews (depends on orders)
         """
         CREATE TABLE IF NOT EXISTS order_reviews (
-            review_id VARCHAR(50) PRIMARY KEY,
+            review_id VARCHAR(50),
             order_id VARCHAR(50) NOT NULL,
             review_score INTEGER NOT NULL,
             review_comment_title TEXT,
@@ -169,6 +201,7 @@ def create_tables():
             review_answer_timestamp TIMESTAMP,
             has_title BOOLEAN,
             has_message BOOLEAN,
+            PRIMARY KEY (review_id, order_id),
             FOREIGN KEY (order_id) REFERENCES orders(order_id)
         );
         """
@@ -192,15 +225,16 @@ def create_tables():
         print(f"✗ Error creating tables: {e}")
         raise
 
+
+
 def load_data_to_postgres():
-    """Load data from CSV files into PostgreSQL tables"""
+    """Load data from CSV files into PostgreSQL tables using fast COPY"""
     
-    # Define the order of loading (respecting foreign key dependencies)
     load_order = [
+        ('product_category_translation', './datasets/category_translation_clean.csv'),
         ('geolocation', './datasets/geolocation_clean.csv'),
         ('customers', './datasets/olist_customers_dataset.csv'),
-        ('sellers', './datasets/olist_sellers_dataset.csv'),
-        ('product_category_translation', './datasets/product_category_name_translation.csv'),
+        ('sellers', './datasets/olist_sellers_dataset.csv'),        
         ('products', './datasets/products_clean.csv'),
         ('orders', './datasets/orders_clean.csv'),
         ('order_items', './datasets/olist_order_items_dataset.csv'),
@@ -212,37 +246,40 @@ def load_data_to_postgres():
         conn = psycopg2.connect(**DB_PARAMS)
         cursor = conn.cursor()
         
-        print("📊 Loading data into tables...\n")
+        print("📊 Loading data into tables (FAST MODE)...\n")
         
         for table_name, csv_path in load_order:
-            print(f"  Loading {table_name}...", end=' ')
-            
-            # Read CSV
+            print(f"  Loading {table_name}...", end=' ', flush=True)
+                        
             df = pd.read_csv(csv_path)
             
-            # Replace NaN with None for proper NULL handling
-            df = df.where(pd.notnull(df), None)
+            # 2. Create an in-memory buffer
+            output = io.StringIO()
             
-            # Prepare column names and placeholders
-            columns = df.columns.tolist()
-            placeholders = ','.join(['%s'] * len(columns))
-            columns_str = ','.join(columns)
+            # 3. Write DataFrame to buffer in CSV format
+            df.to_csv(output, sep=',', header=False, index=False)
             
-            # Insert data
-            insert_query = f"INSERT INTO {table_name} ({columns_str}) VALUES ({placeholders}) ON CONFLICT DO NOTHING"
+            # 4. Reset pointer to start of buffer
+            output.seek(0)
             
-            # Convert DataFrame to list of tuples
-            data = [tuple(row) for row in df.values]
+            # 5. Execute the COPY command
+            try:
+                cursor.copy_expert(
+                    sql=f"COPY {table_name} FROM STDIN WITH (FORMAT CSV, DELIMITER ',', NULL '')",
+                    file=output
+                )
+                conn.commit()
+            except psycopg2.errors.UniqueViolation:
+                # COPY fails completely on duplicate. If you need to skip duplicates,
+                # you must use a temp table approach (see note below).
+                conn.rollback()
+                print(f"[WARN: Duplicates in {table_name}]", end=" ")
             
-            # Execute batch insert
-            cursor.executemany(insert_query, data)
-            conn.commit()
-            
-            # Get count
+            # Get count for verification
             cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
             count = cursor.fetchone()[0]
             
-            print(f"✓ {count:,} rows")
+            print(f"✓ {count:,} rows loaded")
         
         cursor.close()
         conn.close()
@@ -250,6 +287,8 @@ def load_data_to_postgres():
         
     except Exception as e:
         print(f"\n✗ Error loading data: {e}")
+        if conn:
+            conn.rollback()
         raise
 
 def verify_database():

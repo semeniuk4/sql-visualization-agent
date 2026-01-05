@@ -7,14 +7,19 @@ import psycopg2
 import pandas as pd
 from tabulate import tabulate
 import warnings
+import os
+from dotenv import load_dotenv
 warnings.filterwarnings('ignore')
 
+load_dotenv() 
+
 DB_PARAMS = {
-    'host': 'localhost',
-    'port': 5432,
-    'user': 'postgres',
-    'password': 'postgres',
-    'database': 'olist_ecommerce'
+    'host': os.getenv('DB_HOST'),
+    'port': int(os.getenv('DB_PORT', 5432)), 
+    
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'database': os.getenv('DB_NAME')
 }
 
 def run_query(query, description):
@@ -319,59 +324,6 @@ def query_advanced_techniques():
     """
     run_query(query2, "CTE: Seller Performance vs State Average")
     
-    # 4.3 Window Functions - Customer Ranking
-    query3 = """
-    SELECT 
-        customer_state,
-        customer_id,
-        total_spent,
-        order_count,
-        RANK() OVER (PARTITION BY customer_state ORDER BY total_spent DESC) as state_rank,
-        ROUND(100.0 * total_spent / SUM(total_spent) OVER (PARTITION BY customer_state)::numeric, 2) as pct_of_state_revenue
-    FROM (
-        SELECT 
-            c.customer_state,
-            c.customer_id,
-            COUNT(DISTINCT o.order_id) as order_count,
-            SUM(oi.price + oi.freight_value) as total_spent
-        FROM customers c
-        INNER JOIN orders o ON c.customer_id = o.customer_id
-        INNER JOIN order_items oi ON o.order_id = oi.order_id
-        GROUP BY c.customer_state, c.customer_id
-        HAVING SUM(oi.price + oi.freight_value) > 1000
-    ) customer_totals
-    LIMIT 15;
-    """
-    run_query(query3, "WINDOW FUNCTIONS: Top Customers Ranked by State")
-    
-    # 4.4 CASE Statements - Review Categorization
-    query4 = """
-    SELECT 
-        CASE 
-            WHEN review_score >= 4 THEN 'Positive'
-            WHEN review_score = 3 THEN 'Neutral'
-            ELSE 'Negative'
-        END as review_category,
-        COUNT(*) as review_count,
-        ROUND(AVG(review_score)::numeric, 2) as avg_score,
-        ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER ()::numeric, 2) as percentage,
-        SUM(CASE WHEN has_message THEN 1 ELSE 0 END) as reviews_with_comments
-    FROM order_reviews
-    GROUP BY 
-        CASE 
-            WHEN review_score >= 4 THEN 'Positive'
-            WHEN review_score = 3 THEN 'Neutral'
-            ELSE 'Negative'
-        END
-    ORDER BY 
-        CASE review_category
-            WHEN 'Positive' THEN 1
-            WHEN 'Neutral' THEN 2
-            ELSE 3
-        END;
-    """
-    run_query(query4, "CASE STATEMENTS: Review Sentiment Analysis")
-
 
 def query_business_insights():
     """Business intelligence queries"""

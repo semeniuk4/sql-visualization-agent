@@ -33,16 +33,15 @@ root_agent = Agent(
     description='Expert agent for analyzing Olist E-commerce database with SQL queries, data insights, and advanced visualizations.',
     instruction=root_instructions,
     planner=BuiltInPlanner(
-  thinking_config=ThinkingConfig(include_thoughts=False, thinking_budget=0)
+        thinking_config=ThinkingConfig(include_thoughts=False, thinking_budget=0)
     ),
     tools=[
         MCPToolset(
-        connection_params=StreamableHTTPConnectionParams(
-        url=MCP_SERVER_URL
+            connection_params=StreamableHTTPConnectionParams(
+            url=MCP_SERVER_URL
         ),
-        errlog=None,
-        # Load all tools from the MCP server at the given URL
-        tool_filter=None,
+            errlog=None,            
+            tool_filter=None,
         ),
         # Add visualization tools
         create_bar_chart,

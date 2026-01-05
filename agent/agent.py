@@ -4,9 +4,6 @@ from google.adk.planners.built_in_planner import BuiltInPlanner
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import SseConnectionParams, StreamableHTTPConnectionParams
 from google.genai.types import ThinkingConfig
-from google.auth import compute_engine
-import google.auth.transport.requests
-import google.oauth2.id_token
 from agent.prompts.root_agent_prompt import root_instructions
 from agent.visualization_tools import (
     create_bar_chart,
@@ -17,11 +14,8 @@ from agent.visualization_tools import (
     create_histogram,
     create_box_plot
 )
-import vertexai
-from vertexai import agent_engines
-from vertexai.preview import reasoning_engines
 
-# Replace this URL with the correct endpoint for your MCP server.
+
 MCP_SERVER_URL = "http://127.0.0.1:5000/mcp"
 if not MCP_SERVER_URL:
     raise ValueError("The MCP_SERVER_URL is not set.")
@@ -43,7 +37,7 @@ root_agent = Agent(
             errlog=None,            
             tool_filter=None,
         ),
-        # Add visualization tools
+        # Visualization tools
         create_bar_chart,
         create_line_chart,
         create_pie_chart,

@@ -2,6 +2,8 @@
 
 An AI-powered agent that analyzes Brazilian e-commerce data using natural language queries. Built with Google ADK (Gemini 2.5 Flash), PostgreSQL, and Model Context Protocol (MCP) for database access.
 
+Created by **Ivan Semeniuk**
+
 ## 🎯 Features
 
 - **Natural Language Queries** - Ask questions in plain English
@@ -145,6 +147,4 @@ AgenticProject/
 # In the Streamlit app, try:
 "Show me the top 10 customers by total spending"
 "Create a line chart showing monthly order trends for 2017"
-"What's the average review score for each product category?"
-"Visualize payment method distribution with a pie chart"
 ```

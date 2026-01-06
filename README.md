@@ -4,6 +4,11 @@ An AI-powered agent that analyzes Brazilian e-commerce data using natural langua
 
 Created by **Ivan Semeniuk**
 
+**[Link to the git hub repository (you will not be able to run it, because there are not credentials)](https://github.com/semeniuk4/sql-visualization-agent)** 
+
+
+**[YouTube presentation Video](https://youtu.be/6eVgoxrSYZA)** 
+
 ## 🎯 Features
 
 - **Natural Language Queries** - Ask questions in plain English
@@ -48,7 +53,7 @@ Created by **Ivan Semeniuk**
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.13.11 (recommended) or 3.9+
 - `.env` file with Gemini API key and database credentials (included in project)
 
 ### Setup
@@ -57,9 +62,9 @@ Created by **Ivan Semeniuk**
 
 The database is already deployed on Heroku with all data loaded. Simply run the application:
 
-1. **Activate virtual environment** (included in project)
+1. **Install dependencies**
 ```bash
-source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 2. **Start MCP server** (in separate terminal)
@@ -82,9 +87,9 @@ streamlit run app.py
 
 If you want to see the full data processing pipeline:
 
-1. **Activate virtual environment**
+1. **Install dependencies**
 ```bash
-source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 2. **Run data processing notebook**
@@ -92,15 +97,15 @@ source .venv/bin/activate
    - Run all cells to clean and process the raw CSV files
    - This will generate processed CSV files in `datasets/` directory
 
-3. **Continue with steps 2-5 from Option 1**
+3. **Continue with steps 2-4 from Option 1**
 
 #### Option 3: Reload Database (Optional)
 
 If you need to reset the database (⚠️ **This will drop all existing tables**):
 
-1. **Activate virtual environment**
+1. **Install dependencies**
 ```bash
-source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 2. **Run database setup script**
@@ -111,12 +116,7 @@ python database/database_setup.py
    - Database is hosted on Heroku
    - Script will drop existing tables, recreate schema, and upload data from processed CSV files
 
-3. **Continue with steps 2-5 from Option 1**
-
-> **Note:** If `.venv` is not working, first run:
-> ```bash
-> pip install -r requirements.txt
-> ```
+3. **Continue with steps 2-4 from Option 1**
 
 ## 📁 Project Structure
 

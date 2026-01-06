@@ -30,6 +30,10 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def _parse_data(data):
     """Parse data from various formats into a list of dictionaries."""
+    # If it's already a list or dict, return as-is
+    if isinstance(data, (list, dict)):
+        return data
+    
     if isinstance(data, str):
         try:
             return json.loads(data)
